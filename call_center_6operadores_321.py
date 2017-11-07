@@ -3,8 +3,8 @@
 
 """
     Simulación para un callcenter con 5 operadores
-    * 3 junior
-    * 1 semi-senior
+    * 2 junior
+    * 2 semi-senior
     * 1 senior
 """
 
@@ -12,7 +12,6 @@ from CallCenterModel import *
 
 #cant de casos
 n = 400
-
 
 # un vector por cada columna que luego se transforma al .csv
 num_aleat_1 = np.ones(n)*-1
@@ -38,6 +37,8 @@ op4_tiempo_inicio = np.ones(n+M)*-1
 op4_tiempo_fin = np.ones(n+M)*-1
 op5_tiempo_inicio = np.ones(n+M)*-1
 op5_tiempo_fin = np.ones(n+M)*-1
+op6_tiempo_inicio = np.ones(n+M)*-1
+op6_tiempo_fin = np.ones(n+M)*-1
 
 llamada = np.ones(n)*-1
 llegada = np.ones(n)*-1
@@ -50,7 +51,8 @@ op1 = Operador(n, M) #junior
 op2 = Operador(n, M) #junior
 op3 = Operador(n, M) #junior
 op4 = Operador(n, M) #semi-senior
-op5 = Operador(n, M) #senior
+op5 = Operador(n, M) #semi-senior
+op6 = Operador(n, M) #senior
 for i in range(n):
     rn_1 = genNumero()
     dur = getDuracionLlamada( rn_1 )
@@ -80,6 +82,7 @@ for i in range(n):
     if tipo=="consulta" or tipo=="turno":
         try: #junior
             op1.ocupar(tiempo, dur)
+            #TODO: refactoring, below two lines, process result in the same method
             op1_tiempo_inicio[i] = int( tiempo )
             op1_tiempo_fin[i] = int( tiempo + dur )
         except OcupadoException:
@@ -100,20 +103,25 @@ for i in range(n):
             op4_tiempo_inicio[i] = tiempo 
             op4_tiempo_fin[i] = int( tiempo + dur )
         except OcupadoException:
-            no_atendido[i] = 1 
+            try:
+                op5.ocupar(tiempo, dur)
+                op5_tiempo_inicio[i] = tiempo 
+                op5_tiempo_fin[i] = int( tiempo + dur )
+            except OcupadoException:
+                no_atendido[i] = 1 
     elif tipo=="garantia": #senior
         try:
-            op5.ocupar(tiempo, dur)
-            op5_tiempo_inicio[i] = tiempo 
-            op5_tiempo_fin[i] = int( tiempo + dur )
+            op6.ocupar(tiempo, dur)
+            op6_tiempo_inicio[i] = tiempo 
+            op6_tiempo_fin[i] = int( tiempo + dur )
         except OcupadoException:
             no_atendido[i] = 1 
 
 
-filename = "output-5operadores-3junior.csv"
+filename = "output-6operadores-3junior-2semisenior.csv"
 with open(filename, 'w') as out:
     out.write( "Llamada, Nº Aleat 1, Duracion, Nº Aleat 2, Tipo de Llamada, Nº Aleat 3, Distancia, Llegada,")
-    out.write( "Op1 Inicio, Op1 Fin, Op2 Inicio, Op2 Fin, Op3 Inicio, Op3 Fin, Op4 Inicio, Op4 Fin, No Atendido\n")
+    out.write( "Op1 Inicio, Op1 Fin, Op2 Inicio, Op2 Fin, Op3 Inicio, Op3 Fin, Op4 Inicio, Op4 Fin, Op5 Inicio, Op5 Fin, Op6 Inicio, Op6 Fin, No Atendido\n")
     for i in range(n):
         out.write("%i,"%(i+1)) # número de llamadas
         out.write( "%i,%i,%i,"%(
@@ -167,12 +175,21 @@ with open(filename, 'w') as out:
             out.write( "%i,"%op5_tiempo_fin[i] )
         else:
             out.write(',')
+        if( op6_tiempo_inicio[i]!=-1 ):
+            out.write( "%i,"%op6_tiempo_inicio[i] )
+        else:
+            out.write(',')
+        if( op6_tiempo_fin[i]!=-1 ):
+            out.write( "%i,"%op6_tiempo_fin[i] )
+        else:
+            out.write(',')
         if( no_atendido[i]!=-1 ):
             out.write( "%i"%no_atendido[i] )
         out.write('\n')
 
+
 print("=== Reporte ===")
-print("3 junior, 1 semi-senior, 1 senior")
+print("2 junior, 2 semi-senior, 1 senior")
 print("Cantidad de no atendidos: %i"%np.count_nonzero(no_atendido == 1))
 tiempo_max = int( np.max( np.array([np.max(op1_tiempo_fin),np.max(op2_tiempo_fin),np.max(op3_tiempo_fin),np.max(op4_tiempo_fin)]) ) )
 print("Tiempo máximo de simulación: %i"%tiempo_max)
@@ -180,19 +197,21 @@ print("Tiempo ocioso Op1 (junior): %i minutos"%op1.getTiempoOcioso(tiempo_max) )
 print("Tiempo ocioso Op2 (junior): %i minutos"%op2.getTiempoOcioso(tiempo_max) )
 print("Tiempo ocioso Op3 (junior): %i minutos"%op3.getTiempoOcioso(tiempo_max) )
 print("Tiempo ocioso Op4 (semi-senior): %i minutos"%op4.getTiempoOcioso(tiempo_max) )
-print("Tiempo ocioso Op5 (senior): %i minutos"%op5.getTiempoOcioso(tiempo_max) )
+print("Tiempo ocioso Op5 (semi-senior): %i minutos"%op5.getTiempoOcioso(tiempo_max) )
+print("Tiempo ocioso Op6 (senior): %i minutos"%op6.getTiempoOcioso(tiempo_max) )
 
 #TODO: sumar horas de descanso ocupando el tiempo de los operadores con la función ocupar (por ej escalados cada 30minutos, la unidad de tiempo)
 
 # TODO:  Hacer varias simulaciones y tomar promedio y desvio? (average y std-dev en excel)
-# with open("simulaciones-5op_311.csv", 'w') as out:
-#       out.write("No atendidos, T.Ocioso Op1 (junior), T.Ocioso Op2 (junior), T.Ocioso Op3 (juniorº), T.Ocioso Op4 (SemiSenior), T.Ocioso Op5 (senior)\n")
-with open("simulaciones-5op_311.csv", 'a') as out:
-      out.write("%i,%i,%i,%i,%i,%i\n"%(
+# with open("simulaciones-6op_321.csv", 'w') as out:
+#      out.write("No atendidos, T.Ocioso Op1 (junior), T.Ocioso Op2 (junior), T.Ocioso Op3 (junior), T.Ocioso Op4 (SemiSenior), T.Ocioso Op5 (SemiSenior), T.Ocioso Op6 (senior)\n")
+with open("simulaciones-6op_321.csv", 'a') as out:
+     out.write("%i,%i,%i,%i,%i,%i,%i\n"%(
        np.count_nonzero(no_atendido == 1),
        op1.getTiempoOcioso(tiempo_max),
        op2.getTiempoOcioso(tiempo_max),
        op3.getTiempoOcioso(tiempo_max),
        op4.getTiempoOcioso(tiempo_max),
-       op5.getTiempoOcioso(tiempo_max)
+       op5.getTiempoOcioso(tiempo_max),
+       op6.getTiempoOcioso(tiempo_max)
      ))
